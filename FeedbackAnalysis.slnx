@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="FeedbackAnalysis.ClientUI/FeedbackAnalysis.ClientUI.csproj" />
+  <Project Path="FeedbackAnalysis.DataApi/FeedbackAnalysis.DataApi.csproj" />
+  <Project Path="FeedbackAnalysis.ReviewsHandlerApi/FeedbackAnalysis.ReviewsHandlerApi.csproj" />
+  <Project Path="FeedbackAnalysis.WBService/FeedbackAnalysis.WBService.csproj" />
+</Solution>

@@ -1,0 +1,6 @@
+@FeedbackAnalysis.ReviewsHandlerApi_HostAddress = http://localhost:5278
+
+GET {{FeedbackAnalysis.ReviewsHandlerApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
