@@ -1,8 +1,248 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model List<FeedbackAnalysis.ClientUI.Models.FeedbackViewModel>
+
+@{
+    ViewData["Title"] = "Необработанные отзывы";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+    <h2 class="mb-4">Необработанные отзывы</h2>
+
+    <!-- Список отзывов -->
+    <div id="reviewsContainer">
+        @if (Model != null && Model.Any())
+        {
+            foreach (var review in Model)
+            {
+                // Определяем класс для фона в зависимости от оценки
+                string ratingClass = review.Tonality switch
+                {
+                    <= -0.25f => "rating-negative",    // Красный для 1-2
+                    >= 0.25f => "rating-neutral",     // Желтый для 3-4
+                    _ => "rating-positive"        // Зеленый для 5
+                };
+
+                <div class="card mb-3 review-item @ratingClass" data-id="@review.Id" data-rating="@review.Tonality">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">@review.Sender</h5>
+                                <div class="mb-2">
+                                    Оценка: <b class="ms-2">@review.Tonality</b>
+                                </div>
+                            </div>
+                            <small class="text-muted">@review.CreatedDate.ToString()</small>
+                        </div>
+                        <p class="card-text mt-2">@review.Text</p>
+
+                        <div class="text-secondary">
+                            Ссылка: <a href="@review.NomenclatureLink" target="_blank">@review.NomenclatureLink</a>
+                        </div>
+
+                        <button class="btn btn-outline-primary btn-sm reply-toggle mt-2" data-review-id="@review.Id">
+                            <i class="bi bi-reply"></i> Ответить
+                        </button>
+                        <div class="reply-form mt-2" style="display: none;" data-review-id="@review.Id">
+                            <div class="input-group">
+                                <input type="text" class="form-control form-control-sm reply-sender" placeholder="Ваше имя" value="Администратор">
+                                <input type="text" class="form-control form-control-sm reply-text" placeholder="Текст ответа">
+                                <button class="btn btn-primary btn-sm reply-submit" data-review-id="@review.Id">Отправить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-info">Пока нет отзывов.</div>
+        }
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Переключение формы ответа
+            $(document).on('click', '.reply-toggle', function() {
+                var reviewId = $(this).data('review-id');
+                $('.reply-form[data-review-id="' + reviewId + '"]').toggle();
+            });
+
+            // Отправка ответа
+            $(document).on('click', '.reply-submit', function() {
+                var reviewId = $(this).data('review-id');
+                var form = $(this).closest('.reply-form');
+                var sender = form.find('.reply-sender').val();
+                var text = form.find('.reply-text').val();
+
+                if (!sender || !text) {
+                    alert('Заполните все поля!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Reviews/AddReply',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        id: reviewId,
+                        sender: sender,
+                        text: text
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Ошибка: ' + response.message);
+                        }
+                    },
+                    error: function() {
+                        alert('Ошибка при отправке ответа');
+                    }
+                });
+            });
+
+            // Отправка нового отзыва
+            $('#addReviewForm').submit(function(e) {
+                e.preventDefault();
+
+                var sender = $('#senderInput').val();
+                var rating = $('#ratingInput').val();
+                var text = $('#textInput').val();
+
+                if (!sender || !text) {
+                    alert('Заполните все поля!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Reviews/AddReview',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        sender: sender,
+                        rating: parseInt(rating),
+                        text: text
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Ошибка при добавлении отзыва');
+                        }
+                    },
+                    error: function() {
+                        alert('Ошибка при отправке отзыва');
+                    }
+                });
+            });
+
+            // Подгрузка отзывов (обновление)
+            $('#loadMoreBtn').click(function() {
+                $.ajax({
+                    url: '/Reviews/GetReviews',
+                    type: 'GET',
+                    success: function(data) {
+                        // Очищаем контейнер
+                        $('#reviewsContainer').empty();
+
+                        if (data && data.length > 0) {
+                            // Перебираем отзывы и добавляем их вручную
+                            data.forEach(function(review) {
+                                var reviewHtml = `
+                                                    <div class="card mb-3 review-item" data-id="${review.id}">
+                                                        <div class="card-body">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div>
+                                                                    <h5 class="card-title mb-1">${review.sender}</h5>
+                                                                    <div class="text-warning mb-2">
+                                                                        ${generateStars(review.rating)}
+                                                                        <span class="text-muted ms-2">${review.rating}/5</span>
+                                                                    </div>
+                                                                </div>
+                                                                <small class="text-muted">${new Date(review.createdAt).toLocaleString()}</small>
+                                                            </div>
+                                                            <p class="card-text mt-2">${review.text}</p>
+                                                            <button class="btn btn-outline-primary btn-sm reply-toggle mt-2" data-review-id="${review.id}">
+                                                                <i class="bi bi-reply"></i> Ответить
+                                                            </button>
+                                                            <div class="reply-form mt-2" style="display: none;" data-review-id="${review.id}">
+                                                                <div class="input-group">
+                                                                    <input type="text" class="form-control form-control-sm reply-sender" placeholder="Ваше имя" value="Администратор">
+                                                                    <input type="text" class="form-control form-control-sm reply-text" placeholder="Текст ответа">
+                                                                    <button class="btn btn-primary btn-sm reply-submit" data-review-id="${review.id}">Отправить</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                $('#reviewsContainer').append(reviewHtml);
+                            });
+                        } else {
+                            $('#reviewsContainer').html('<div class="alert alert-info">Пока нет отзывов. Будьте первым!</div>');
+                        }
+                    },
+                    error: function() {
+                        alert('Ошибка при загрузке отзывов');
+                    }
+                });
+            });
+
+            // Функция генерации звезд
+            function generateStars(rating) {
+                var stars = '';
+                for (var i = 1; i <= 5; i++) {
+                    stars += i <= rating ? '⭐' : '☆';
+                }
+                return stars;
+            }
+        });
+    </script>
+}
+
+<style>
+    .review-item {
+        transition: all 0.2s;
+    }
+
+        .review-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+    .border-start {
+        border-left: 3px solid #dee2e6 !important;
+    }
+
+    .reply-form {
+        max-width: 100%;
+    }
+
+        .reply-form .input-group {
+            flex-wrap: nowrap;
+        }
+    /* Только фон карточки меняется */
+    .review-item {
+        transition: all 0.3s ease;
+    }
+
+    /* Отрицательные отзывы (оценка 1-2) - красный фон */
+    .rating-negative {
+        background-color: #fde8e8 !important;
+    }
+
+    /* Нейтральные отзывы (оценка 3-4) - желтый фон */
+    .rating-neutral {
+        background-color: #fef9e7 !important;
+    }
+
+    /* Положительные отзывы (оценка 5) - зеленый фон */
+    .rating-positive {
+        background-color: #e8f8e8 !important;
+    }
+
+    /* Сохраняем оригинальные стили Bootstrap для карточки */
+    .review-item {
+        border: 1px solid rgba(0,0,0,.125);
+        border-radius: 0.375rem;
+    }
+</style>

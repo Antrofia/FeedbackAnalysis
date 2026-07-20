@@ -58,12 +58,12 @@ namespace FeedbackAnalysis.WBService.Services
 
                 var feedback = new FeedbackModel
                 {
-                    service = "wb",
-                    serviceId = item.id,
-                    rating = item.productValuation / 5d,
-                    text = fullText.Length > 0 ? fullText.ToString() : null,
-                    createdDate = item.createdDate,
-                    nomenclatureLink = $"www.wildberries.ru/catalog/{item.nmId}/detail.aspx"
+                    Service = "wb",
+                    ServiceId = item.id,
+                    Rating = item.productValuation / 5d,
+                    Text = fullText.Length > 0 ? fullText.ToString() : null,
+                    CreatedDate = item.createdDate,
+                    NomenclatureLink = $"www.wildberries.ru/catalog/{item.nmId}/detail.aspx"
                 };
 
                 result.Add(feedback);

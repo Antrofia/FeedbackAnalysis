@@ -4,9 +4,9 @@ namespace FeedbackAnalysis.DataApi.Repositories.Interfaces
 {
     public interface IRepository<T, TKey>
     {
-        Task<T> GetAsync(TKey key);
-        Task<T> FindAsync(Expression<T> predicate);
-        Task<IEnumerable<T>> FindAllAsync(Expression<T> predicate);
+        Task<IQueryable<T>> GetAllAsync();
+        Task<T?> GetAsync(TKey key);
+        Task<IQueryable<T>> FindAsync(Expression<Func<T, bool>> predicate);
 
         Task AddAsync(T entity);
         Task UpdateAsync(T entity);

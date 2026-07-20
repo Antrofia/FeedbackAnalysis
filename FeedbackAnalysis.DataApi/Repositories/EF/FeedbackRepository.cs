@@ -14,34 +14,39 @@ namespace FeedbackAnalysis.DataApi.Repositories.EF
             _context = context;
         }
 
-        public Task AddAsync(FeedbackModel entity)
+        public async Task AddAsync(FeedbackModel entity)
         {
-            throw new NotImplementedException();
+            await _context.Feedbacks.AddAsync(entity);
         }
 
-        public Task<IEnumerable<FeedbackModel>> FindAllAsync(Expression<FeedbackModel> predicate)
+        public Task<IQueryable<FeedbackModel>> FindAsync(Expression<Func<FeedbackModel, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IQueryable<FeedbackModel>>(_context.Feedbacks.Where(predicate));
         }
 
-        public Task<FeedbackModel> FindAsync(Expression<FeedbackModel> predicate)
+        public Task<IQueryable<FeedbackModel>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IQueryable<FeedbackModel>>(_context.Feedbacks);
         }
 
-        public Task<FeedbackModel> GetAsync(string key)
+        public async Task<FeedbackModel?> GetAsync(string key)
         {
-            throw new NotImplementedException();
+            return await _context.Feedbacks.FindAsync(key);
         }
 
-        public Task RemoveAsync(string key)
+        public async Task RemoveAsync(string key)
         {
-            throw new NotImplementedException();
+            var target = await GetAsync(key);
+            if (target != null)
+            {
+                _context.Feedbacks.Remove(target);
+            }
         }
 
         public Task UpdateAsync(FeedbackModel entity)
         {
-            throw new NotImplementedException();
+            _context.Feedbacks.Update(entity);
+            return Task.CompletedTask;
         }
     }
 }

@@ -1,14 +1,4 @@
-# См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
-
-# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-
-# Этот этап используется для сборки проекта службы
+# Сборка .NET приложения
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
@@ -18,13 +8,80 @@ COPY . .
 WORKDIR "/src/FeedbackAnalysis.ReviewsHandlerApi"
 RUN dotnet build "./FeedbackAnalysis.ReviewsHandlerApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
+# Публикация .NET приложения
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./FeedbackAnalysis.ReviewsHandlerApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
-FROM base AS final
+# Финальный образ: .NET runtime + Python с виртуальным окружением
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+
+# Полное удаление и переустановка Python
+RUN apt-get update && \
+    apt-get remove -y python3 python3-pip || true && \
+    apt-get autoremove -y && \
+    apt-get install -y --no-install-recommends \
+    wget \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libopenblas-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Установка Python из официального репозитория с перезаписью
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Проверка и создание корректных симлинков
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+RUN python3 --version
+
+# Копируем и устанавливаем Python-зависимости (устанавливаются в venv)
+COPY FeedbackAnalysis.ReviewsHandlerApi/requirements.txt .
+#RUN pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --upgrade pip || true
+RUN python3 -m pip install --no-cache-dir --break-system-packages -r requirements.txt || \
+    python3 -m pip install --no-cache-dir --ignore-installed -r requirements.txt || \
+    python3 -m pip install --no-cache-dir --user -r requirements.txt
+
+# Устанавливаем huggingface-hub с CLI-инструментом
+#RUN python3 -m pip install --no-cache-dir huggingface-hub
+
+# Скачиваем модель в папку /model
+RUN hf download hf://blanchefort/rubert-base-cased-sentiment-rurewiews/model.safetensors \
+    --local-dir /app/model && \
+    hf download hf://blanchefort/rubert-base-cased-sentiment-rurewiews/config.json \
+    --local-dir /app/model && \
+    hf download hf://blanchefort/rubert-base-cased-sentiment-rurewiews/special_tokens_map.json \
+    --local-dir /app/model && \
+    hf download hf://blanchefort/rubert-base-cased-sentiment-rurewiews/tokenizer_config.json \
+    --local-dir /app/model && \
+    hf download hf://blanchefort/rubert-base-cased-sentiment-rurewiews/vocab.txt \
+    --local-dir /app/model
+
+# Копируем Python-скрипт
+COPY FeedbackAnalysis.ReviewsHandlerApi/reviews_predicate.py .
+
+# Копируем опубликованное .NET приложение
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "FeedbackAnalysis.ReviewsHandlerApi.dll"]
+
+# Копируем скрипт запуска и делаем его исполняемым
+#COPY FeedbackAnalysis.ReviewsHandlerApi/entrypoint.sh /app/entrypoint.sh
+#RUN chmod +x /app/entrypoint.sh
+
+# Копируем конфигурацию supervisor
+COPY FeedbackAnalysis.ReviewsHandlerApi/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Порты, которые использует ASP.NET
+EXPOSE 8080
+EXPOSE 8081
+
+# Точка входа
+#ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
