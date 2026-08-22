@@ -8,6 +8,6 @@ namespace FeedbackAnalysis.DataApi.UnitOfWork
         IFeedbackAnswerStatusRepository FeedbackAnswerStatusRepository { get; }
         IFeedbackTonalityRepository FeedbackTonalityRepository { get; }
 
-        void Save();
+        Task SaveAsync();
     }
 }

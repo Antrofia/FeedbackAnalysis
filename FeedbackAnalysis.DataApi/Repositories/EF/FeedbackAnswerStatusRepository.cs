@@ -19,19 +19,19 @@ namespace FeedbackAnalysis.DataApi.Repositories.EF
             await _context.FeedbacksAnswerStatus.AddAsync(entity);
         }
 
-        public Task<IQueryable<FeedbackAnswerStatusModel>> FindAsync(Expression<Func<FeedbackAnswerStatusModel, bool>> predicate)
+        public IQueryable<FeedbackAnswerStatusModel> Find(Expression<Func<FeedbackAnswerStatusModel, bool>> predicate)
         {
-            return Task.FromResult<IQueryable<FeedbackAnswerStatusModel>>(_context.FeedbacksAnswerStatus.Where(predicate));
+            return _context.FeedbacksAnswerStatus.Where(predicate);
         }
 
-        public Task<IQueryable<FeedbackAnswerStatusModel>> GetAllAsync()
+        public IQueryable<FeedbackAnswerStatusModel> GetAll()
         {
-            return Task.FromResult<IQueryable<FeedbackAnswerStatusModel>>(_context.FeedbacksAnswerStatus);
+            return _context.FeedbacksAnswerStatus;
         }
 
-        public async Task<FeedbackAnswerStatusModel?> GetAsync(string key)
+        public ValueTask<FeedbackAnswerStatusModel?> GetAsync(string key)
         {
-            return await _context.FeedbacksAnswerStatus.FindAsync(key);
+            return _context.FeedbacksAnswerStatus.FindAsync(key);
         }
 
         public async Task RemoveAsync(string key)
@@ -43,10 +43,9 @@ namespace FeedbackAnalysis.DataApi.Repositories.EF
             }
         }
 
-        public Task UpdateAsync(FeedbackAnswerStatusModel entity)
+        public void Update(FeedbackAnswerStatusModel entity)
         {
             _context.FeedbacksAnswerStatus.Update(entity);
-            return Task.CompletedTask;
         }
     }
 }

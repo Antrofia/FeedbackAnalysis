@@ -8,7 +8,6 @@ namespace FeedbackAnalysis.DataApi.UnitOfWork
     {
         private readonly EFContext _context;
 
-
         private IFeedbackRepository? _feedbackRepository;
         private IFeedbackAnswerStatusRepository? _feedbackAnswerStatusRepository;
         private IFeedbackTonalityRepository? _feedbackTonalityRepository;
@@ -19,14 +18,12 @@ namespace FeedbackAnalysis.DataApi.UnitOfWork
 
         public EFUnitOfWork(EFContext context)
         {
-            this._context = context;
-
-            
+            _context = context;
         }
 
-        public void Save()
+        public Task SaveAsync()
         {
-            _context.SaveChanges();
+            return _context.SaveChangesAsync();
         }
     }
 }

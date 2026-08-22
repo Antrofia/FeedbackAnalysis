@@ -1,4 +1,6 @@
-﻿namespace FeedbackAnalysis.ClientUI.Models
+﻿using FeedbackAnalysis.ClientUI.Models;
+
+namespace FeedbackAnalysis.ClientUI.Models
 {
     [Flags]
     public enum FeedbackAnswerStatuses

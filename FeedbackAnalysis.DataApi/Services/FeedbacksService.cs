@@ -1,6 +1,7 @@
 ﻿using FeedbackAnalysis.DataApi.Models;
 using FeedbackAnalysis.DataApi.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace FeedbackAnalysis.DataApi.Services
 {
@@ -13,33 +14,74 @@ namespace FeedbackAnalysis.DataApi.Services
             _unitOfWork = unitOfWork;
         }
 
-        public Task AddNewFeedbacksAsync(IEnumerable<FeedbackModel> feedbacks)
+        public async Task AddNewFeedbacksAsync(IEnumerable<FeedbackModel> feedbacks)
         {
-            throw new NotImplementedException();
+            var items = feedbacks
+                .GroupBy(x => $"{x.Service}:{x.ServiceId}")
+                .Select(g => g.First())
+                .ToList();
+
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var feedback in items)
+            {
+                feedback.Id = $"{feedback.Service}:{feedback.ServiceId}";
+            }
+
+            var ids = items.Select(x => x.Id).ToList();
+
+            var existingIds = _unitOfWork.FeedbackRepository
+                .Find(x => ids.Contains(x.Id))
+                .Select(x => x.Id)
+                .ToHashSet();
+
+            foreach (var feedback in items)
+            {
+                if (existingIds.Contains(feedback.Id))
+                {
+                    continue;
+                }
+
+                await _unitOfWork.FeedbackRepository.AddAsync(feedback);
+            }
+
+            await _unitOfWork.SaveAsync();
         }
 
         public async Task<List<FeedbackModel>> GetListAsync(DateTime dateFrom, DateTime dateTo, FeedbackAnswerStatuses status = (FeedbackAnswerStatuses)~0)
         {
-            var feedbacks = await (await _unitOfWork.FeedbackRepository.FindAsync(x => x.CreatedDate >= dateFrom && x.CreatedDate <= dateTo)).ToListAsync();
+            var dateFilter = CreateDateFilter(dateFrom, dateTo);
 
-            var validStatuses = (await _unitOfWork.FeedbackAnswerStatusRepository.FindAsync(x => status.HasFlag((FeedbackAnswerStatuses)x.StatusId))).ToDictionary(x => x.FeedbackId, x => x);
-
-            var result = new List<FeedbackModel>(5);
-            foreach (var feedback in feedbacks)
+            if ((int)status == ~0)
             {
-                //if(validStatuses.TryGetValue(feedback.Id, out var statusEntity))
-                //{
-                    result.Add(feedback);
-                //}
+                return await _unitOfWork.FeedbackRepository
+                    .Find(dateFilter)
+                    .ToListAsync();
             }
-            
 
-            return result;
+            var query =
+                from feedback in _unitOfWork.FeedbackRepository.GetAll()
+                join answerStatus in _unitOfWork.FeedbackAnswerStatusRepository.GetAll()
+                    on feedback.Id equals answerStatus.FeedbackId
+                where feedback.CreatedDate >= dateFrom
+                      && feedback.CreatedDate <= dateTo
+                      && ((int)status & answerStatus.StatusId) != 0
+                select feedback;
+
+            return await query.Distinct().ToListAsync();
+        }
+
+        private static Expression<Func<FeedbackModel, bool>> CreateDateFilter(DateTime dateFrom, DateTime dateTo)
+        {
+            return x => x.CreatedDate >= dateFrom && x.CreatedDate <= dateTo;
         }
 
         public async Task<List<FeedbackModel>> GetAllAsync()
         {
-            return (await _unitOfWork.FeedbackRepository.GetAllAsync()).ToList();
+            return await _unitOfWork.FeedbackRepository.GetAll().ToListAsync();
         }
     }
 }

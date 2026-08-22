@@ -13,24 +13,25 @@ namespace FeedbackAnalysis.DataApi.Repositories.EF
         {
             _context = context;
         }
+
         public async Task AddAsync(FeedbackTonalityModel entity)
         {
             await _context.FeedbacksTonality.AddAsync(entity);
         }
 
-        public Task<IQueryable<FeedbackTonalityModel>> FindAsync(Expression<Func<FeedbackTonalityModel, bool>> predicate)
+        public IQueryable<FeedbackTonalityModel> Find(Expression<Func<FeedbackTonalityModel, bool>> predicate)
         {
-            return Task.FromResult<IQueryable<FeedbackTonalityModel>>(_context.FeedbacksTonality.Where(predicate));
+            return _context.FeedbacksTonality.Where(predicate);
         }
 
-        public Task<IQueryable<FeedbackTonalityModel>> GetAllAsync()
+        public IQueryable<FeedbackTonalityModel> GetAll()
         {
-            return Task.FromResult<IQueryable<FeedbackTonalityModel>>(_context.FeedbacksTonality);
+            return _context.FeedbacksTonality;
         }
 
-        public async Task<FeedbackTonalityModel?> GetAsync(string key)
+        public ValueTask<FeedbackTonalityModel?> GetAsync(string key)
         {
-            return await _context.FeedbacksTonality.FindAsync(key);
+            return _context.FeedbacksTonality.FindAsync(key);
         }
 
         public async Task RemoveAsync(string key)
@@ -42,10 +43,9 @@ namespace FeedbackAnalysis.DataApi.Repositories.EF
             }
         }
 
-        public Task UpdateAsync(FeedbackTonalityModel entity)
+        public void Update(FeedbackTonalityModel entity)
         {
             _context.FeedbacksTonality.Update(entity);
-            return Task.CompletedTask;
         }
     }
 }
