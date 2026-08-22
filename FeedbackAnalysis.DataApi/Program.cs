@@ -29,6 +29,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<EFContext>();

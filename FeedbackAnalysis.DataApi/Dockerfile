@@ -26,5 +26,8 @@ RUN dotnet publish "./FeedbackAnalysis.DataApi.csproj" -c $BUILD_CONFIGURATION -
 # Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
 FROM base AS final
 WORKDIR /app
+USER root
+RUN mkdir -p /data && chown -R $APP_UID:$APP_UID /data
+USER $APP_UID
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "FeedbackAnalysis.DataApi.dll"]
