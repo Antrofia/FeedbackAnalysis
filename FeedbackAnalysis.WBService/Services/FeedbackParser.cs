@@ -8,17 +8,15 @@ namespace FeedbackAnalysis.WBService.Services
     {
         private class FeedbackResponse
         {
-            public List<FeedbackItem> feedbacks { get; set; }
+            public List<FeedbackItem> feedbacks { get; set; } = [];
         }
 
         private class FeedbackItem
         {
-            public string id { get; set; }
+            public string id { get; set; } = "";
             public int nmId { get; set; }
-            public string text { get; set; }
+            public string? text { get; set; }
             public int productValuation { get; set; }
-            public string pros { get; set; }
-            public string cons { get; set; }
             public DateTime createdDate { get; set; }
         }
 

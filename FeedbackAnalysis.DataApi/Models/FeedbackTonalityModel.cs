@@ -16,6 +16,6 @@ namespace FeedbackAnalysis.DataApi.Models
 
 
         [ForeignKey(nameof(FeedbackId))]
-        public FeedbackModel Feedback { get; set; }
+        public FeedbackModel Feedback { get; set; } = null!;
     }
 }
