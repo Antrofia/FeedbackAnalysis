@@ -44,7 +44,7 @@ namespace FeedbackAnalysis.DataApi.Controllers
             var result = await _feedbacksService.GetListAsync(dFrom, dTo, (FeedbackAnswerStatuses)status);
             return Ok(new
             {
-                all = result
+                feedbacks = result
             });
         }
     }

@@ -27,10 +27,10 @@ namespace FeedbackAnalysis.DataApi.Services
             var result = new List<FeedbackModel>(5);
             foreach (var feedback in feedbacks)
             {
-                if(validStatuses.TryGetValue(feedback.Id, out var statusEntity))
-                {
+                //if(validStatuses.TryGetValue(feedback.Id, out var statusEntity))
+                //{
                     result.Add(feedback);
-                }
+                //}
             }
             
 

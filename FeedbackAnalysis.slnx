@@ -2,8 +2,7 @@
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>
-  <Project Path="G:/Visual Projects/Projects/FeedbackAnalysis/FeedbackAnalysis.ClientUI/FeedbackAnalysis.ClientUI.csproj" />
-  <Project Path="G:/Visual Projects/Projects/FeedbackAnalysis/FeedbackAnalysis.DataApi/FeedbackAnalysis.DataApi.csproj" />
-  <Project Path="G:/Visual Projects/Projects/FeedbackAnalysis/FeedbackAnalysis.ReviewsHandlerApi/FeedbackAnalysis.ReviewsHandlerApi.csproj" />
-  <Project Path="G:/Visual Projects/Projects/FeedbackAnalysis/FeedbackAnalysis.WBService/FeedbackAnalysis.WBService.csproj" />
+  <Project Path="./FeedbackAnalysis.ClientUI/FeedbackAnalysis.ClientUI.csproj" />
+  <Project Path="./FeedbackAnalysis.DataApi/FeedbackAnalysis.DataApi.csproj" />
+  <Project Path="./FeedbackAnalysis.WBService/FeedbackAnalysis.WBService.csproj" />
 </Solution>

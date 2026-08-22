@@ -12,12 +12,26 @@ namespace FeedbackAnalysis.WBService.Controllers
     {
         private readonly HttpClient _httpClient;
         private readonly IFeedbackParser _feedbackParser;
+        private readonly IFeedbacksDataService _feedbacksDataService;
 
-        public FeedbacksController(IFeedbackParser feedbackParser)
+        public FeedbacksController(
+            IFeedbackParser feedbackParser, 
+            IFeedbacksDataService feedbacksDataService)
         {
             _feedbackParser = feedbackParser;
+            _feedbacksDataService = feedbacksDataService;
 
             _httpClient = new HttpClient();
+        }
+
+
+        [Route("update")]
+        [HttpPost]
+        public async Task<IActionResult> Update()
+        {
+            await _feedbacksDataService.SendAllFeedbacksAsync();
+
+            return Ok();
         }
 
 
@@ -25,32 +39,30 @@ namespace FeedbackAnalysis.WBService.Controllers
         [HttpGet]
         public IActionResult Test()
         {
-
-
             return Ok(new
             {
                 log = "success"
             });
         }
 
-        [Route("fetch")]
-        [HttpPost]
-        //[Authorize]
-        public async Task<IActionResult> Fetch()
-        {
-            // push all queries to DataApi
-            var res = await _httpClient.GetAsync("https://feedback-view-04.wb.ru/feedbacks/v2/369663092");
+        //[Route("fetch")]
+        //[HttpPost]
+        ////[Authorize]
+        //public async Task<IActionResult> Fetch()
+        //{
+        //    // push all queries to DataApi
+        //    var res = await _httpClient.GetAsync("https://feedback-view-04.wb.ru/feedbacks/v2/369663092");
 
-            var json = await res.Content.ReadAsStringAsync();
+        //    var json = await res.Content.ReadAsStringAsync();
 
-            var feedbacks = _feedbackParser.ParseFeedbacks(json);
+        //    var feedbacks = _feedbackParser.ParseFeedbacks(json);
 
 
 
-            return Ok(new
-            {
-                feedbacks = feedbacks
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        feedbacks = feedbacks
+        //    });
+        //}
     }
 }

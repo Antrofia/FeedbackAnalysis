@@ -1,16 +1,28 @@
+using AutoMapper;
 using FeedbackAnalysis.ClientUI.Models;
+using FeedbackAnalysis.ClientUI.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
-using System.Diagnostics;
 
 namespace FeedbackAnalysis.ClientUI.Controllers
 {
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        private readonly IFeedbacksService _feedbacksService;
+        private readonly IMapper _mapper;
+
+        public HomeController(IFeedbacksService feedbacksService, IMapper mapper)
         {
+            _feedbacksService = feedbacksService;
+            _mapper = mapper;
+        }
 
+        public async Task<IActionResult> Index()
+        {
+            var feedbacks = await _feedbacksService.GetFeedbacksAsync(DateTime.UnixEpoch.AddYears(1), DateTime.UtcNow);
 
+            var viewFeedbacks = _mapper.Map<List<FeedbackViewModel>>(feedbacks);
+
+            return View(viewFeedbacks);
 
             return View(new List<FeedbackModel>
             {
@@ -42,17 +54,6 @@ namespace FeedbackAnalysis.ClientUI.Controllers
                     NomenclatureLink = "https://www.youtube.com/watch?v=U_fHtq4F1to"
         }
             });
-        }
-
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

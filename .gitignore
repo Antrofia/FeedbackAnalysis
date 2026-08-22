@@ -404,3 +404,7 @@ docker-compose.yml
 docker-compose.yaml
 docker-compose.*.yml
 docker-compose.*.yaml
+# SQLite runtime files
+*.db
+*.db-shm
+*.db-wal
