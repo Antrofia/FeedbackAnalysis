@@ -58,9 +58,11 @@ def predict(text: str):
     
     return predicted_label, confidence
 
-# Эндпоинт для предсказания
+# Эндпоинт для предсказания.
+# Синхронный def (не async), чтобы torch-инференс не блокировал event loop:
+# FastAPI выполняет такие обработчики в отдельном threadpool.
 @app.post("/predict", response_model=PredictionResponse)
-async def predict_endpoint(request: TextRequest):
+def predict_endpoint(request: TextRequest):
     """
     Эндпоинт для классификации текста.
     Принимает POST запрос с JSON: {"text": "ваш текст"}

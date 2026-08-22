@@ -1,7 +1,6 @@
 ﻿using FeedbackAnalysis.DataApi.Models;
 using FeedbackAnalysis.DataApi.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace FeedbackAnalysis.DataApi.Services
 {
@@ -51,32 +50,46 @@ namespace FeedbackAnalysis.DataApi.Services
             await _unitOfWork.SaveAsync();
         }
 
-        public async Task<List<FeedbackModel>> GetListAsync(DateTime dateFrom, DateTime dateTo, FeedbackAnswerStatuses status = (FeedbackAnswerStatuses)~0)
+        public async Task<PagedResult<FeedbackModel>> GetListAsync(DateTime dateFrom, DateTime dateTo, FeedbackAnswerStatuses status = (FeedbackAnswerStatuses)~0, int page = 1, int pageSize = 50)
         {
-            var dateFilter = CreateDateFilter(dateFrom, dateTo);
+            var skip = (page - 1) * pageSize;
+
+            IQueryable<FeedbackModel> query;
 
             if ((int)status == ~0)
             {
-                return await _unitOfWork.FeedbackRepository
-                    .Find(dateFilter)
-                    .ToListAsync();
+                query = _unitOfWork.FeedbackRepository
+                    .Find(x => x.CreatedDate >= dateFrom && x.CreatedDate <= dateTo);
+            }
+            else
+            {
+                query =
+                    from feedback in _unitOfWork.FeedbackRepository.GetAll()
+                    join answerStatus in _unitOfWork.FeedbackAnswerStatusRepository.GetAll()
+                        on feedback.Id equals answerStatus.FeedbackId
+                    where feedback.CreatedDate >= dateFrom
+                          && feedback.CreatedDate <= dateTo
+                          && ((int)status & answerStatus.StatusId) != 0
+                    select feedback;
+
+                query = query.Distinct();
             }
 
-            var query =
-                from feedback in _unitOfWork.FeedbackRepository.GetAll()
-                join answerStatus in _unitOfWork.FeedbackAnswerStatusRepository.GetAll()
-                    on feedback.Id equals answerStatus.FeedbackId
-                where feedback.CreatedDate >= dateFrom
-                      && feedback.CreatedDate <= dateTo
-                      && ((int)status & answerStatus.StatusId) != 0
-                select feedback;
+            var total = await query.CountAsync();
 
-            return await query.Distinct().ToListAsync();
-        }
+            var items = await query
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
 
-        private static Expression<Func<FeedbackModel, bool>> CreateDateFilter(DateTime dateFrom, DateTime dateTo)
-        {
-            return x => x.CreatedDate >= dateFrom && x.CreatedDate <= dateTo;
+            return new PagedResult<FeedbackModel>
+            {
+                Items = items,
+                Total = total,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         public async Task<List<FeedbackModel>> GetAllAsync()

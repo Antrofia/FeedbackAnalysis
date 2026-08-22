@@ -7,22 +7,23 @@ namespace FeedbackAnalysis.WBService.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<FeedbacksGeneratedHandler> _logger;
+        private readonly HttpClient _httpClient;
 
         public FeedbacksGeneratedHandler(
             IConfiguration configuration,
-            ILogger<FeedbacksGeneratedHandler> logger)
+            ILogger<FeedbacksGeneratedHandler> logger,
+            HttpClient httpClient)
         {
             _configuration = configuration;
             _logger = logger;
+            _httpClient = httpClient;
         }
 
         public async Task Handle(FeedbacksGeneratedEvent notification, CancellationToken cancellationToken)
         {
             var dataApiUrl = _configuration.GetSection("Services").GetValue<string>("FeedbacksData");
 
-            using var httpClient = new HttpClient();
-
-            var res = await httpClient.PostAsJsonAsync(
+            var res = await _httpClient.PostAsJsonAsync(
                 $"{dataApiUrl?.TrimEnd('/')}/api/feedbacks/add-new",
                 new { Feedbacks = notification.Feedbacks },
                 cancellationToken);

@@ -1,6 +1,5 @@
 ﻿using FeedbackAnalysis.DataApi.Models;
 using FeedbackAnalysis.DataApi.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FeedbackAnalysis.DataApi.Controllers
@@ -9,11 +8,13 @@ namespace FeedbackAnalysis.DataApi.Controllers
     [ApiController]
     public class FeedbacksController : ControllerBase
     {
+        private const int MaxPageSize = 200;
+
         private readonly IFeedbacksService _feedbacksService;
 
         public FeedbacksController(IFeedbacksService feedbacksService)
         {
-            this._feedbacksService = feedbacksService;
+            _feedbacksService = feedbacksService;
         }
 
         [Route("add-new")]
@@ -27,9 +28,9 @@ namespace FeedbackAnalysis.DataApi.Controllers
 
         [Route("list")]
         [HttpGet]
-        public async Task<IActionResult> GetList(long dateFrom, long dateTo, int status = ~0)
+        public async Task<IActionResult> GetList(long dateFrom, long dateTo, int status = ~0, int page = 1, int pageSize = 50)
         {
-            if(dateFrom <=0 || dateTo <= 0)
+            if (dateFrom <= 0 || dateTo <= 0)
             {
                 return BadRequest(new
                 {
@@ -37,14 +38,27 @@ namespace FeedbackAnalysis.DataApi.Controllers
                 });
             }
 
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    error = $"{nameof(page)} must be greater than 0!"
+                });
+            }
+
+            pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
             var dFrom = DateTimeOffset.FromUnixTimeSeconds(dateFrom).UtcDateTime;
             var dTo = DateTimeOffset.FromUnixTimeSeconds(dateTo).UtcDateTime;
 
-            var result = await _feedbacksService.GetListAsync(dFrom, dTo, (FeedbackAnswerStatuses)status);
+            var result = await _feedbacksService.GetListAsync(dFrom, dTo, (FeedbackAnswerStatuses)status, page, pageSize);
+
             return Ok(new
             {
-                feedbacks = result
+                feedbacks = result.Items,
+                total = result.Total,
+                page = result.Page,
+                pageSize = result.PageSize
             });
         }
     }

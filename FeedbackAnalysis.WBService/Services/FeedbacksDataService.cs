@@ -11,17 +11,20 @@ namespace FeedbackAnalysis.WBService.Services
         private readonly ILogger<IFeedbacksDataService> _logger;
         private readonly IFeedbackParser _feedbackParser;
         private readonly IMediator _mediator;
+        private readonly HttpClient _httpClient;
 
         public FeedbacksDataService(
             IConfiguration configuration,
             ILogger<IFeedbacksDataService> logger,
             IFeedbackParser feedbackParser,
-            IMediator mediator)
+            IMediator mediator,
+            HttpClient httpClient)
         {
             _configuration = configuration;
             _logger = logger;
             _feedbackParser = feedbackParser;
             _mediator = mediator;
+            _httpClient = httpClient;
         }
 
         public async Task SendAllFeedbacksAsync()
@@ -57,9 +60,7 @@ namespace FeedbackAnalysis.WBService.Services
 
         private async Task<string?> FetchArticleJsonAsync(string host, string article)
         {
-            using var httpClient = new HttpClient();
-
-            using var res = await httpClient.GetAsync($"{host}{article}");
+            using var res = await _httpClient.GetAsync($"{host}{article}");
             if (!res.IsSuccessStatusCode)
             {
                 _logger.LogError("Failed fetch article {article}: {code}", article, res.StatusCode);

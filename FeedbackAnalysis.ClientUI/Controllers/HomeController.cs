@@ -18,7 +18,7 @@ namespace FeedbackAnalysis.ClientUI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var feedbacks = await _feedbacksService.GetFeedbacksAsync(DateTime.UnixEpoch.AddYears(1), DateTime.UtcNow);
+            var feedbacks = await _feedbacksService.GetFeedbacksAsync(DateTime.UnixEpoch.AddYears(1), DateTime.UtcNow, pageSize: 50);
 
             var viewFeedbacks = _mapper.Map<List<FeedbackViewModel>>(feedbacks);
 
