@@ -1,4 +1,4 @@
-﻿using FeedbackAnalysis.WBService.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
 
 namespace FeedbackAnalysis.WBService.Services
 {

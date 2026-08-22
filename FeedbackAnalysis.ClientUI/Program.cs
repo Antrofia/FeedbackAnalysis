@@ -1,5 +1,6 @@
 using FeedbackAnalysis.ClientUI.Models;
 using FeedbackAnalysis.ClientUI.Services;
+using FeedbackAnalysis.Contracts.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

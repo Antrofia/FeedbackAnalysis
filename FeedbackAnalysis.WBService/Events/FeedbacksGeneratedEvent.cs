@@ -1,4 +1,4 @@
-﻿using FeedbackAnalysis.WBService.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
 using MediatR;
 
 namespace FeedbackAnalysis.WBService.Events

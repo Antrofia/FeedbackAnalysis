@@ -1,4 +1,4 @@
-﻿namespace FeedbackAnalysis.DataApi.Models
+namespace FeedbackAnalysis.Contracts.Models
 {
     [Flags]
     public enum FeedbackAnswerStatuses

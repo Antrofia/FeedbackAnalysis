@@ -1,4 +1,4 @@
-﻿using FeedbackAnalysis.DataApi.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
 
 namespace FeedbackAnalysis.DataApi.Repositories.Interfaces
 {

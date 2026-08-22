@@ -1,4 +1,5 @@
-﻿using FeedbackAnalysis.DataApi.Context;
+﻿using FeedbackAnalysis.Contracts.Models;
+using FeedbackAnalysis.DataApi.Context;
 using FeedbackAnalysis.DataApi.Models;
 using FeedbackAnalysis.DataApi.Repositories.Interfaces;
 using System.Linq.Expressions;

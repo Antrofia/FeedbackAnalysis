@@ -1,4 +1,4 @@
-﻿using FeedbackAnalysis.ClientUI.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
 using Newtonsoft.Json;
 
 namespace FeedbackAnalysis.ClientUI.Services

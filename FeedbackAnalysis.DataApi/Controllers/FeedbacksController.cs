@@ -1,4 +1,5 @@
-﻿using FeedbackAnalysis.DataApi.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
+using FeedbackAnalysis.DataApi.Models;
 using FeedbackAnalysis.DataApi.Services;
 using Microsoft.AspNetCore.Mvc;
 

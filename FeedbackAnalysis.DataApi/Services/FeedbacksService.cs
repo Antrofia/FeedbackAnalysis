@@ -1,4 +1,4 @@
-﻿using FeedbackAnalysis.DataApi.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
 using FeedbackAnalysis.DataApi.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
 

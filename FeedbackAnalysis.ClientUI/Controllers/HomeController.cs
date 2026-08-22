@@ -1,6 +1,7 @@
 using AutoMapper;
 using FeedbackAnalysis.ClientUI.Models;
 using FeedbackAnalysis.ClientUI.Services;
+using FeedbackAnalysis.Contracts.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FeedbackAnalysis.ClientUI.Controllers

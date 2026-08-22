@@ -1,4 +1,6 @@
-﻿namespace FeedbackAnalysis.DataApi.Models
+﻿using FeedbackAnalysis.Contracts.Models;
+
+namespace FeedbackAnalysis.DataApi.Models
 {
     public class AddNewFeedbacksModel
     {

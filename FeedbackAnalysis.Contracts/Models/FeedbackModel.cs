@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FeedbackAnalysis.DataApi.Models
+namespace FeedbackAnalysis.Contracts.Models
 {
     [Table("feedbacks")]
     public class FeedbackModel

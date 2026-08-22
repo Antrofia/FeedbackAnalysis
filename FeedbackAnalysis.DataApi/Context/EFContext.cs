@@ -1,4 +1,5 @@
-﻿using FeedbackAnalysis.DataApi.Models;
+﻿using FeedbackAnalysis.Contracts.Models;
+using FeedbackAnalysis.DataApi.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace FeedbackAnalysis.DataApi.Context
