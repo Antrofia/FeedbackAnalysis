@@ -2,123 +2,90 @@
 
 @{
     ViewData["Title"] = "Отзывы";
+
+    var emptyTitle = Model.Tab switch
+    {
+        "priority" => "Приоритетных отзывов нет",
+        "archive" => "Архив пуст",
+        _ => "Новых отзывов пока нет"
+    };
+
+    var emptyHint = Model.Tab switch
+    {
+        "priority" => "Негативные отзывы появятся здесь — их стоит обрабатывать в первую очередь.",
+        "archive" => "Обработанные и заархивированные отзывы будут собираться здесь.",
+        _ => "Как только поступят отзывы маркетплейсов, вы увидите их здесь."
+    };
 }
 
-<div class="container mt-4">
-    <h2 class="mb-4">Отзывы</h2>
-
-    @if (TempData["ReplySuccess"] is string replySuccess)
-    {
-        <div class="alert alert-success">@replySuccess</div>
-    }
-
-    @if (TempData["ReplyError"] is string replyError)
-    {
-        <div class="alert alert-warning">@replyError</div>
-    }
-
-    <!-- Вкладки: серверная навигация через ?tab=... -->
-    <ul class="nav nav-pills mb-3">
-        <li class="nav-item">
-            <a class="nav-link @(Model.Tab == "all" ? "active" : "")"
-               asp-controller="Home" asp-action="Index" asp-route-tab="all">
-                Все
-                @if (Model.Tab == "all")
-                {
-                    <span class="badge bg-light text-dark ms-1">@Model.Total</span>
-                }
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(Model.Tab == "priority" ? "active" : "")"
-               asp-controller="Home" asp-action="Index" asp-route-tab="priority">
-                ⭐ Приоритетные
-                @if (Model.Tab == "priority")
-                {
-                    <span class="badge bg-light text-dark ms-1">@Model.Total</span>
-                }
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(Model.Tab == "archive" ? "active" : "")"
-               asp-controller="Home" asp-action="Index" asp-route-tab="archive">
-                Архив
-                @if (Model.Tab == "archive")
-                {
-                    <span class="badge bg-light text-dark ms-1">@Model.Total</span>
-                }
-            </a>
-        </li>
-    </ul>
-
-    <!-- Список отзывов -->
-    <div id="reviewsContainer">
-        @if (Model.Items.Count > 0)
-        {
-            foreach (var feedback in Model.Items)
-            {
-                ViewData["ReadOnly"] = Model.Tab == "archive";
-                ViewData["Tab"] = Model.Tab;
-                <partial name="_FeedbackCard" model="feedback" />
-            }
-        }
-        else
-        {
-            <div class="alert alert-info">Пока нет отзывов.</div>
-        }
-    </div>
-
-    <!-- Пагинация -->
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <span>Всего: @Model.Total</span>
-        <nav aria-label="Постраничная навигация">
-            <ul class="pagination mb-0">
-                <li class="page-item @(Model.HasPrev ? "" : "disabled")">
-                    <a class="page-link" asp-controller="Home" asp-action="Index"
-                       asp-route-tab="@Model.Tab" asp-route-page="@(Model.Page - 1)">← Назад</a>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">@Model.Page из @(Model.TotalPages > 0 ? Model.TotalPages : 1)</span>
-                </li>
-                <li class="page-item @(Model.HasNext ? "" : "disabled")">
-                    <a class="page-link" asp-controller="Home" asp-action="Index"
-                       asp-route-tab="@Model.Tab" asp-route-page="@(Model.Page + 1)">Вперёд →</a>
-                </li>
-            </ul>
-        </nav>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+        <h1 class="page-heading">Отзывы</h1>
+        <p class="page-subtitle mb-0">Отзывы маркетплейсов: реакция оператора и архив</p>
     </div>
 </div>
 
-<style>
-    .review-item {
-        transition: all 0.2s;
-    }
+@if (TempData["ReplySuccess"] is string replySuccess)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @replySuccess
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+    </div>
+}
 
-        .review-item:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+@if (TempData["ReplyError"] is string replyError)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        @replyError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+    </div>
+}
+
+<!-- Вкладки: серверная навигация через ?tab=..., у каждой вкладки свой счётчик -->
+<div class="tab-switcher mb-4" role="navigation" aria-label="Вкладки отзывов">
+    <a class="tab-item @(Model.Tab == "all" ? "active" : "")"
+       asp-controller="Home" asp-action="Index" asp-route-tab="all">
+        Все
+        <span class="tab-count">@Model.CountAll</span>
+    </a>
+    <a class="tab-item @(Model.Tab == "priority" ? "active" : "")"
+       asp-controller="Home" asp-action="Index" asp-route-tab="priority">
+        ⭐ Приоритетные
+        <span class="tab-count count-priority @(Model.CountPriority > 0 ? "has-items" : "")">@Model.CountPriority</span>
+    </a>
+    <a class="tab-item @(Model.Tab == "archive" ? "active" : "")"
+       asp-controller="Home" asp-action="Index" asp-route-tab="archive">
+        Архив
+        <span class="tab-count">@Model.CountArchive</span>
+    </a>
+</div>
+
+<!-- Список отзывов -->
+<div id="reviewsContainer">
+    @if (Model.Items.Count > 0)
+    {
+        foreach (var feedback in Model.Items)
+        {
+            ViewData["ReadOnly"] = Model.Tab == "archive";
+            ViewData["Tab"] = Model.Tab;
+            <partial name="_FeedbackCard" model="feedback" />
         }
-
-    .reply-form {
-        max-width: 100%;
     }
-
-    /* Отрицательные отзывы - красный фон */
-    .rating-negative {
-        background-color: #fde8e8 !important;
+    else
+    {
+        <div class="empty-state">
+            <div class="icon" aria-hidden="true">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                </svg>
+            </div>
+            <h2>@emptyTitle</h2>
+            <p>@emptyHint</p>
+        </div>
     }
+</div>
 
-    /* Нейтральные отзывы - желтый фон */
-    .rating-neutral {
-        background-color: #fef9e7 !important;
-    }
-
-    /* Положительные отзывы - зеленый фон */
-    .rating-positive {
-        background-color: #e8f8e8 !important;
-    }
-
-    .review-item {
-        border: 1px solid rgba(0,0,0,.125);
-        border-radius: 0.375rem;
-    }
-</style>
+<!-- Пагинация -->
+<partial name="_PaginationBar" model="Model" />

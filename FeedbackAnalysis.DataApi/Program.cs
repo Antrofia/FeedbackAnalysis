@@ -34,6 +34,14 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
+if (string.IsNullOrWhiteSpace(builder.Configuration.GetSection("Services")["FeedbacksHandler"]))
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning(
+        "Не задан адрес ML-сервиса (Services:FeedbacksHandler) — классификация тональности будет падать. " +
+        "Укажите его в appsettings.json или через переменную окружения Services__FeedbacksHandler.");
+}
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

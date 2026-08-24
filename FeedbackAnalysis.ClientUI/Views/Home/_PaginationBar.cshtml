@@ -1,0 +1,35 @@
+@model FeedbackAnalysis.ClientUI.Models.FeedbacksPageViewModel
+
+@{
+    // Диапазон отображаемых отзывов на текущей странице — для строки «Показано X–Y из N»
+    var shownFrom = Model.Total == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1;
+    var shownTo = Math.Min(Model.Page * Model.PageSize, Model.Total);
+}
+
+<div class="page-bar">
+    <span class="page-info">
+        @if (Model.Total > 0)
+        {
+            <text>Показано @shownFrom–@shownTo из @Model.Total</text>
+        }
+        else
+        {
+            <text>Всего: 0</text>
+        }
+    </span>
+    <nav aria-label="Постраничная навигация">
+        <ul class="pagination mb-0">
+            <li class="page-item @(Model.HasPrev ? "" : "disabled")">
+                <a class="page-link" asp-controller="Home" asp-action="Index"
+                   asp-route-tab="@Model.Tab" asp-route-page="@(Model.Page - 1)">← Назад</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link page-current">@Model.Page из @(Model.TotalPages > 0 ? Model.TotalPages : 1)</span>
+            </li>
+            <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                <a class="page-link" asp-controller="Home" asp-action="Index"
+                   asp-route-tab="@Model.Tab" asp-route-page="@(Model.Page + 1)">Вперёд →</a>
+            </li>
+        </ul>
+    </nav>
+</div>

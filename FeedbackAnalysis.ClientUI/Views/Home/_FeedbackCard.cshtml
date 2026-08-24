@@ -11,87 +11,153 @@
         && (Model.NomenclatureLink.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             || Model.NomenclatureLink.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
 
-    var cardClass = Model.Tonality switch
+    // Тональность -> класс карточки и пилюля с подписью
+    var toneClass = Model.Tonality switch
     {
         null => "",
-        <= -0.25 => "rating-negative",
-        >= 0.25 => "rating-positive",
-        _ => "rating-neutral"
+        <= -0.25 => "tone-negative",
+        >= 0.25 => "tone-positive",
+        _ => "tone-neutral"
     };
+    var (pillClass, pillLabel) = Model.Tonality switch
+    {
+        null => ("pill-unknown", "Тональность не рассчитана"),
+        <= -0.25 => ("pill-negative", "Негативный"),
+        >= 0.25 => ("pill-positive", "Позитивный"),
+        _ => ("pill-neutral", "Нейтральный")
+    };
+
+    // Аватар — первый символ имени отправителя
+    var initial = string.IsNullOrWhiteSpace(Model.Sender)
+        ? "?"
+        : Model.Sender.Trim()[..1].ToUpperInvariant();
+
+    // Относительное время («2 ч назад»), точная дата — в подсказке
+    var relativeTime = "—";
+    var absoluteTime = "";
+    if (Model.CreatedDate.HasValue)
+    {
+        var created = Model.CreatedDate.Value;
+        absoluteTime = created.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+        var delta = DateTime.UtcNow - created;
+        relativeTime = delta.TotalSeconds < 60 ? "только что"
+            : delta.TotalHours < 1 ? $"{(int)delta.TotalMinutes} мин назад"
+            : delta.TotalHours < 24 ? $"{(int)delta.TotalHours} ч назад"
+            : delta.TotalDays < 30 ? $"{(int)delta.TotalDays} дн назад"
+            : created.ToString("dd.MM.yyyy");
+    }
+
+    // Рейтинг звёздами: 0–5, дробное значение округляется
+    var fullStars = Math.Clamp((int)Math.Round(Model.Rating), 0, 5);
 }
 
-<div class="card mb-3 review-item @cardClass" data-id="@Model.Id">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <h5 class="card-title mb-1">@Model.Sender</h5>
-                <div class="mb-2 status-badges">
-                    @if ((status & (int)FeedbackAnswerStatuses.RequireToAnswer) != 0)
-                    {
-                        <span class="badge bg-warning text-dark">Требует ответа</span>
-                    }
-                    @if ((status & (int)FeedbackAnswerStatuses.Answered) != 0)
-                    {
-                        <span class="badge bg-success">Отвечен</span>
-                    }
-                    @if ((status & (int)FeedbackAnswerStatuses.Archived) != 0)
-                    {
-                        <span class="badge bg-secondary">В архиве</span>
-                    }
-                </div>
+<article class="feedback-card @toneClass" data-id="@Model.Id">
+    <div class="d-flex align-items-start gap-3">
+        <div class="avatar-circle" aria-hidden="true">@initial</div>
+        <div class="flex-grow-1 min-wide-0">
+            <div class="d-flex justify-content-between align-items-baseline gap-2">
+                <span class="fb-author text-truncate">@Model.Sender</span>
+                <span class="fb-time" title="@absoluteTime">@relativeTime</span>
             </div>
-            <small class="text-muted">@Model.CreatedDate?.ToString("dd.MM.yyyy HH:mm")</small>
-        </div>
 
-        <p class="card-text mt-2">@Model.Text</p>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                <span class="stars" aria-label="Оценка: @Model.Rating из 5">
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        if (i <= fullStars)
+                        {
+                            <span>★</span>
+                        }
+                        else
+                        {
+                            <span class="star-empty">★</span>
+                        }
+                    }
+                </span>
+                <span class="rating-value">@Model.Rating.ToString("0.#")</span>
 
-        <div class="mb-2">
-            Оценка: <b class="ms-1">@Model.Rating</b>
-        </div>
+                <span class="tonality-pill @pillClass" title="Тональность по оценке нейросети">
+                    <span class="tonality-dot" aria-hidden="true"></span>
+                    @pillLabel@(Model.Tonality is null ? "" : $" {Model.Tonality.Value.ToString("+0.00;-0.00")}")
+                </span>
 
-        @if (!string.IsNullOrEmpty(Model.NomenclatureLink) && safeLink)
-        {
-            <div class="text-secondary">
-                Товар: <a href="@Model.NomenclatureLink" target="_blank" rel="noopener">@Model.NomenclatureLink</a>
+                @if ((status & (int)FeedbackAnswerStatuses.RequireToAnswer) != 0)
+                {
+                    <span class="badge-soft badge-soft-warn">Требует ответа</span>
+                }
+                @if ((status & (int)FeedbackAnswerStatuses.Answered) != 0)
+                {
+                    <span class="badge-soft badge-soft-ok">Отвечен</span>
+                }
+                @if ((status & (int)FeedbackAnswerStatuses.Archived) != 0)
+                {
+                    <span class="badge-soft badge-soft-mute">В архиве</span>
+                }
             </div>
-        }
-        else if (!string.IsNullOrEmpty(Model.NomenclatureLink))
-        {
-            <div class="text-secondary">Товар: @Model.NomenclatureLink</div>
-        }
+        </div>
+    </div>
 
-        @if (!readOnly && (status & (int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived)) == 0)
+    <p class="fb-text">@Model.Text</p>
+
+    @if (!string.IsNullOrEmpty(Model.NomenclatureLink))
+    {
+        if (safeLink)
         {
-            <button type="button" class="btn btn-outline-primary btn-sm reply-toggle mt-2" data-review-id="@Model.Id">
-                Ответить
-            </button>
-            <div class="reply-form mt-2" style="display: none;" data-review-id="@Model.Id">
-                <form asp-controller="Home" asp-action="Reply" method="post" class="row g-2 align-items-center">
-                    <input type="hidden" name="feedbackId" value="@Model.Id" />
-                    <input type="hidden" name="tab" value="@tab" />
+            <a class="product-chip" href="@Model.NomenclatureLink" target="_blank" rel="noopener"
+               title="@Model.NomenclatureLink">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
+                <span class="chip-label">@Model.NomenclatureLink</span>
+            </a>
+        }
+        else
+        {
+            <span class="product-chip" title="@Model.NomenclatureLink">
+                <span class="chip-label">@Model.NomenclatureLink</span>
+            </span>
+        }
+    }
+
+    @if (!readOnly && (status & (int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived)) == 0)
+    {
+        <button type="button" class="btn btn-outline-accent btn-sm reply-toggle mt-3" data-review-id="@Model.Id"
+                aria-expanded="false" aria-controls="reply-@Model.Id">
+            Ответить
+        </button>
+
+        <div id="reply-@Model.Id" class="reply-panel reply-form" style="display: none;" data-review-id="@Model.Id">
+            <form asp-controller="Home" asp-action="Reply" method="post">
+                <input type="hidden" name="feedbackId" value="@Model.Id" />
+                <input type="hidden" name="tab" value="@tab" />
+                <div class="row g-2 align-items-center">
                     <div class="col-sm-4 col-md-3">
                         <input type="text" name="sender" class="form-control form-control-sm" value="Администратор" aria-label="Имя отправителя" />
                     </div>
-                    <div class="col-sm-6 col-md-7">
-                        <textarea name="text" rows="2" class="form-control form-control-sm" placeholder="Текст ответа"></textarea>
+                    <div class="col-12 mt-2">
+                        <textarea name="text" rows="3" class="form-control form-control-sm reply-textarea"
+                                  placeholder="Текст ответа клиенту…"></textarea>
                     </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
-                    </div>
-                </form>
-                <form asp-controller="Home" asp-action="Archive" method="post" class="mt-2">
-                    <input type="hidden" name="feedbackId" value="@Model.Id" />
-                    <input type="hidden" name="tab" value="@tab" />
-                    <button type="submit" class="btn btn-outline-secondary btn-sm">Пропустить</button>
-                </form>
-            </div>
-        }
+                </div>
+                <div class="reply-actions">
+                    <button type="submit" class="btn btn-primary btn-sm">Отправить ответ</button>
+                </div>
+            </form>
+            <form asp-controller="Home" asp-action="Archive" method="post" class="mt-2 mb-1">
+                <input type="hidden" name="feedbackId" value="@Model.Id" />
+                <input type="hidden" name="tab" value="@tab" />
+                <button type="submit" class="btn btn-ghost btn-sm">В архив без ответа</button>
+            </form>
+        </div>
+    }
 
-        @if ((status & (int)FeedbackAnswerStatuses.Answered) != 0)
-        {
-            <div class="answer-block mt-2 p-2 border rounded bg-light">
-                <b>Ответ (@Model.AnswerSender):</b> @Model.AnswerText
-            </div>
-        }
-    </div>
-</div>
+    @if ((status & (int)FeedbackAnswerStatuses.Answered) != 0)
+    {
+        <div class="answer-quote">
+            <div class="answer-meta">Ответ оператора @(string.IsNullOrWhiteSpace(Model.AnswerSender) ? "" : $"· {Model.AnswerSender}")</div>
+            @Model.AnswerText
+        </div>
+    }
+</article>

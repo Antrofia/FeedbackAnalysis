@@ -11,7 +11,12 @@ namespace FeedbackAnalysis.Tests.ClientUITests;
 
 public class HomeControllerTests
 {
+    private const int MainPageSize = 20;
+
     private readonly Mock<IFeedbacksService> _feedbacksServiceMock = new();
+
+    // Все вызовы GetFeedbacksAsync за тест: основной запрос страницы + запросы-счётчики вкладок
+    private readonly List<(DateTime Start, DateTime End, int Status, bool Priority, int Page, int PageSize)> _invocations = new();
 
     private HomeController CreateSut()
     {
@@ -28,38 +33,29 @@ public class HomeControllerTests
         _feedbacksServiceMock
             .Setup(s => s.GetFeedbacksAsync(
                 It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Callback<DateTime, DateTime, int, bool, int, int>((start, end, status, priority, page, pageSize) =>
+                _invocations.Add((start, end, status, priority, page, pageSize)))
             .ReturnsAsync(new FeedbacksPage { Items = items ?? [], Total = total });
     }
+
+    // Основной запрос страницы — единственный вызов с полным размером страницы
+    private (DateTime Start, DateTime End, int Status, bool Priority, int Page, int PageSize) MainCall =>
+        _invocations.Single(c => c.PageSize == MainPageSize);
 
     [Fact]
     public async Task Index_RequestsFeedbacksWithExpectedWindowAndPageSize()
     {
-        DateTime capturedStart = default;
-        DateTime capturedEnd = default;
-        int capturedPage = 0;
-        int capturedPageSize = 0;
-
-        _feedbacksServiceMock
-            .Setup(s => s.GetFeedbacksAsync(
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Callback<DateTime, DateTime, int, bool, int, int>((start, end, _, _, page, pageSize) =>
-            {
-                capturedStart = start;
-                capturedEnd = end;
-                capturedPage = page;
-                capturedPageSize = pageSize;
-            })
-            .ReturnsAsync(new FeedbacksPage());
+        SetupGetFeedbacks();
 
         var sut = CreateSut();
 
         await sut.Index();
 
-        Assert.Equal(DateTime.UnixEpoch.AddYears(1), capturedStart);
-        Assert.True(capturedEnd <= DateTime.UtcNow);
-        Assert.True(capturedEnd > DateTime.UtcNow.AddMinutes(-1));
-        Assert.Equal(1, capturedPage);
-        Assert.Equal(20, capturedPageSize);
+        Assert.Equal(DateTime.UnixEpoch.AddYears(1), MainCall.Start);
+        Assert.True(MainCall.End <= DateTime.UtcNow);
+        Assert.True(MainCall.End > DateTime.UtcNow.AddMinutes(-1));
+        Assert.Equal(1, MainCall.Page);
+        Assert.Equal(20, MainCall.PageSize);
     }
 
     [Theory]
@@ -68,49 +64,27 @@ public class HomeControllerTests
     [InlineData("archive", (int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived), false)]
     public async Task Index_PassesStatusAndPriorityAccordingToTab(string tab, int expectedStatus, bool expectedPriority)
     {
-        int capturedStatus = 0;
-        bool capturedPriority = false;
-
-        _feedbacksServiceMock
-            .Setup(s => s.GetFeedbacksAsync(
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Callback<DateTime, DateTime, int, bool, int, int>((_, _, status, priority, _, _) =>
-            {
-                capturedStatus = status;
-                capturedPriority = priority;
-            })
-            .ReturnsAsync(new FeedbacksPage());
+        SetupGetFeedbacks();
 
         var sut = CreateSut();
 
         await sut.Index(tab);
 
-        Assert.Equal(expectedStatus, capturedStatus);
-        Assert.Equal(expectedPriority, capturedPriority);
+        Assert.Equal(expectedStatus, MainCall.Status);
+        Assert.Equal(expectedPriority, MainCall.Priority);
     }
 
     [Fact]
     public async Task Index_UnknownTab_FallsBackToAllFilter()
     {
-        int capturedStatus = 0;
-        bool capturedPriority = false;
-
-        _feedbacksServiceMock
-            .Setup(s => s.GetFeedbacksAsync(
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Callback<DateTime, DateTime, int, bool, int, int>((_, _, status, priority, _, _) =>
-            {
-                capturedStatus = status;
-                capturedPriority = priority;
-            })
-            .ReturnsAsync(new FeedbacksPage());
+        SetupGetFeedbacks();
 
         var sut = CreateSut();
 
         var result = await sut.Index("неизвестная-вкладка");
 
-        Assert.Equal((int)FeedbackAnswerStatuses.RequireToAnswer, capturedStatus);
-        Assert.False(capturedPriority);
+        Assert.Equal((int)FeedbackAnswerStatuses.RequireToAnswer, MainCall.Status);
+        Assert.False(MainCall.Priority);
 
         var model = Assert.IsType<FeedbacksPageViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal("all", model.Tab);
@@ -119,22 +93,44 @@ public class HomeControllerTests
     [Fact]
     public async Task Index_PageLessThanOne_DefaultsToOne()
     {
-        int capturedPage = 0;
-
-        _feedbacksServiceMock
-            .Setup(s => s.GetFeedbacksAsync(
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Callback<DateTime, DateTime, int, bool, int, int>((_, _, _, _, page, _) => capturedPage = page)
-            .ReturnsAsync(new FeedbacksPage());
+        SetupGetFeedbacks();
 
         var sut = CreateSut();
 
         var result = await sut.Index(page: -3);
 
-        Assert.Equal(1, capturedPage);
+        Assert.Equal(1, MainCall.Page);
 
         var model = Assert.IsType<FeedbacksPageViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal(1, model.Page);
+    }
+
+    [Fact]
+    public async Task Index_RequestsCountersForEveryOtherTabWithMinimalPage()
+    {
+        SetupGetFeedbacks(total: 7);
+
+        var sut = CreateSut();
+
+        await sut.Index("all");
+
+        // Основной запрос + счётчики двух остальных вкладок
+        Assert.Equal(3, _invocations.Count);
+
+        var counterCalls = _invocations.Where(c => c.PageSize != MainPageSize).ToList();
+        Assert.Equal(2, counterCalls.Count);
+
+        // Счётчикам достаточно Total: минимальная страница
+        Assert.All(counterCalls, c =>
+        {
+            Assert.Equal(1, c.Page);
+            Assert.Equal(1, c.PageSize);
+        });
+
+        // Затронуты обе оставшиеся вкладки: приоритетные и архив
+        var filters = counterCalls.Select(c => (c.Status, c.Priority)).ToHashSet();
+        Assert.Contains(((int)FeedbackAnswerStatuses.RequireToAnswer, true), filters);
+        Assert.Contains(((int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived), false), filters);
     }
 
     [Fact]
@@ -174,6 +170,38 @@ public class HomeControllerTests
         var model = Assert.IsType<FeedbacksPageViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Empty(model.Items);
         Assert.Equal(0, model.Total);
+    }
+
+    [Fact]
+    public async Task Index_ReturnsCountsForAllTabs()
+    {
+        // Total зависит от запрошенного фильтра: эмулируем разные счётчики вкладок
+        _feedbacksServiceMock
+            .Setup(s => s.GetFeedbacksAsync(
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync((DateTime _, DateTime _, int status, bool priority, int _, int _) =>
+            {
+                var total = (status, priority) switch
+                {
+                    ((int)FeedbackAnswerStatuses.RequireToAnswer, true) => 3,
+                    ((int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived), false) => 48,
+                    _ => 12
+                };
+                return new FeedbacksPage { Items = [], Total = total };
+            });
+
+        var sut = CreateSut();
+
+        var result = await sut.Index("priority");
+
+        var model = Assert.IsType<FeedbacksPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+        Assert.Equal(12, model.CountAll);
+        Assert.Equal(3, model.CountPriority);
+        Assert.Equal(48, model.CountArchive);
+
+        // Счётчик текущей вкладки совпадает с Total выборки страницы
+        Assert.Equal(3, model.Total);
     }
 
     [Fact]

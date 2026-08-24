@@ -6,17 +6,39 @@ namespace FeedbackAnalysis.FakeFeedbacksService.Services
 {
     public class FakeFeedbacksGenerator : IFakeFeedbacksGenerator
     {
-        // Распределение тональности в батче: примерно 40% / 30% / 30%
-        private const int PositiveSharePercent = 40;
-        private const int NeutralSharePercent = 70; // верхняя граница positive+neutral
+        private const string GeneratorSectionName = "Generator";
+
+        // Значения по умолчанию при отсутствии/некорректности конфига: примерно 40% / 30% / 30%
+        public const int DefaultPositiveWeight = 40;
+        public const int DefaultNeutralWeight = 30;
+        public const int DefaultNegativeWeight = 30;
 
         private readonly IConfiguration _configuration;
         private readonly Random _random;
+
+        // Относительные веса тональностей в батче (из Generator:Weights:{Positive|Neutral|Negative})
+        private readonly int _positiveWeight;
+        private readonly int _neutralWeight;
+        private readonly int _negativeWeight;
 
         public FakeFeedbacksGenerator(IConfiguration configuration, Random? random = null)
         {
             _configuration = configuration;
             _random = random ?? new Random();
+
+            var generatorSection = configuration.GetSection(GeneratorSectionName);
+
+            _positiveWeight = Math.Max(0, generatorSection.GetValue("Weights:Positive", DefaultPositiveWeight));
+            _neutralWeight = Math.Max(0, generatorSection.GetValue("Weights:Neutral", DefaultNeutralWeight));
+            _negativeWeight = Math.Max(0, generatorSection.GetValue("Weights:Negative", DefaultNegativeWeight));
+
+            // Страховка от вырожденной конфигурации (все веса нулевые) — используем значения по умолчанию
+            if (_positiveWeight + _neutralWeight + _negativeWeight == 0)
+            {
+                _positiveWeight = DefaultPositiveWeight;
+                _neutralWeight = DefaultNeutralWeight;
+                _negativeWeight = DefaultNegativeWeight;
+            }
         }
 
         public List<FeedbackModel> GenerateBatch(int count)
@@ -48,14 +70,15 @@ namespace FeedbackAnalysis.FakeFeedbacksService.Services
 
         private FeedbackTonality NextTonality()
         {
-            var roll = _random.Next(100);
+            // Взвешенный выбор: roll попадает в один из диапазонов [0, positive), [positive, positive+neutral), ...
+            var roll = _random.Next(_positiveWeight + _neutralWeight + _negativeWeight);
 
-            if (roll < PositiveSharePercent)
+            if (roll < _positiveWeight)
             {
                 return FeedbackTonality.Positive;
             }
 
-            return roll < NeutralSharePercent ? FeedbackTonality.Neutral : FeedbackTonality.Negative;
+            return roll < _positiveWeight + _neutralWeight ? FeedbackTonality.Neutral : FeedbackTonality.Negative;
         }
 
         private double NextRating(FeedbackTonality tonality)

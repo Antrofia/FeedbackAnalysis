@@ -25,24 +25,43 @@ namespace FeedbackAnalysis.ClientUI.Controllers
                 page = 1;
             }
 
-            // Вкладка -> фильтр (status, priorityOnly) для DataApi
-            var (status, priorityOnly) = tab switch
-            {
-                "priority" => ((int)FeedbackAnswerStatuses.RequireToAnswer, true),
-                "archive" => ((int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived), false),
-                _ => ((int)FeedbackAnswerStatuses.RequireToAnswer, false)
-            };
+            // Окно выборки: отзывы за последний год
+            var windowStart = DateTime.UnixEpoch.AddYears(1);
+            var windowEnd = DateTime.UtcNow;
 
-            var feedbacksPage = await _feedbacksService.GetFeedbacksAsync(
-                DateTime.UnixEpoch.AddYears(1), DateTime.UtcNow, status, priorityOnly, page, PageSize);
+            var currentFilter = GetFilterForTab(tab);
+            var currentPageTask = _feedbacksService.GetFeedbacksAsync(
+                windowStart, windowEnd, currentFilter.Status, currentFilter.PriorityOnly, page, PageSize);
+
+            // Счётчики остальных вкладок запрашиваем параллельно (достаточно Total — pageSize = 1)
+            var counterTasks = AllTabs
+                .Where(t => t != tab)
+                .Select(async t =>
+                {
+                    var filter = GetFilterForTab(t);
+                    var pageData = await _feedbacksService.GetFeedbacksAsync(
+                        windowStart, windowEnd, filter.Status, filter.PriorityOnly, 1, 1);
+                    return (Tab: t, pageData.Total);
+                })
+                .ToArray();
+
+            await Task.WhenAll(new Task[] { currentPageTask }.Concat(counterTasks));
+
+            var counts = counterTasks
+                .Select(t => t.Result)
+                .ToDictionary(t => t.Tab, t => t.Total);
+            counts[tab] = currentPageTask.Result.Total;
 
             var model = new FeedbacksPageViewModel
             {
-                Items = feedbacksPage.Items,
-                Total = feedbacksPage.Total,
+                Items = currentPageTask.Result.Items,
+                Total = currentPageTask.Result.Total,
                 Tab = tab,
                 Page = page,
-                PageSize = PageSize
+                PageSize = PageSize,
+                CountAll = counts.GetValueOrDefault("all"),
+                CountPriority = counts.GetValueOrDefault("priority"),
+                CountArchive = counts.GetValueOrDefault("archive")
             };
 
             return View(model);
@@ -95,7 +114,17 @@ namespace FeedbackAnalysis.ClientUI.Controllers
             return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
+        private static readonly string[] AllTabs = ["all", "priority", "archive"];
+
         private static string NormalizeTab(string? tab) =>
             tab is "all" or "priority" or "archive" ? tab : "all";
+
+        // Вкладка -> фильтр (status, priorityOnly) для DataApi
+        private static (int Status, bool PriorityOnly) GetFilterForTab(string tab) => tab switch
+        {
+            "priority" => ((int)FeedbackAnswerStatuses.RequireToAnswer, true),
+            "archive" => ((int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived), false),
+            _ => ((int)FeedbackAnswerStatuses.RequireToAnswer, false)
+        };
     }
 }

@@ -12,5 +12,10 @@ namespace FeedbackAnalysis.ClientUI.Models
         public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(Total / (double)PageSize) : 0;
         public bool HasPrev => Page > 1;
         public bool HasNext => Page < TotalPages;
+
+        // Счётчики всех вкладок — показываются на переключателе одновременно
+        public int CountAll { get; init; }
+        public int CountPriority { get; init; }
+        public int CountArchive { get; init; }
     }
 }
