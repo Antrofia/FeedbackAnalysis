@@ -1,6 +1,6 @@
 [
   {
-    "Name": "Новый профиль",
+    "Name": "Все сервисы (https)",
     "Projects": [
       {
         "Path": "FeedbackAnalysis.ClientUI\\FeedbackAnalysis.ClientUI.csproj",
@@ -9,7 +9,12 @@
       },
       {
         "Path": "FeedbackAnalysis.DataApi\\FeedbackAnalysis.DataApi.csproj",
-        "Action": "StartWithoutDebugging",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "FeedbackAnalysis.FakeFeedbacksService\\FeedbackAnalysis.FakeFeedbacksService.csproj",
+        "Action": "Start",
         "DebugTarget": "https"
       }
     ]

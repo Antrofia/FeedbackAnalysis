@@ -11,16 +11,16 @@
 Стек:
 
 - **.NET 10** (решение в формате `FeedbackAnalysis.slnx` — XML-вариант .sln)
-- **Python 3.9** для ML-сервиса (только через docker-compose)
+- **Python 3.9** для ML-сервиса (запускается вручную: `pip install -r requirements.txt`, затем `python download_model.py` и `uvicorn main:app --port 8000`)
 - **SQLite** + EF Core (`EnsureCreated()`, миграций нет)
 
-| Сервис | Технология | Назначение | Локальный порт | Docker-порт |
-|---|---|---|---|---|
-| `FeedbackAnalysis.ClientUI` | ASP.NET Core MVC | Веб-интерфейс оператора: вкладки Все/Приоритетные/Архив, ответы, архивирование | https://localhost:7154 | 8081 → 8080 |
-| `FeedbackAnalysis.DataApi` | ASP.NET Core Web API + EF Core | REST API хранения/пагинации отзывов, вызов ML, статусы, ответы оператора (SQLite) | https://localhost:8082 | 8082 → 8080 |
-| `FeedbackAnalysis.FakeFeedbacksService` | ASP.NET Core Web API | Генератор фейковых отзывов из шаблонов; ручной `POST api/generation/run` + opt-in таймер | https://localhost:7503 | 8083 → 8080 |
-| `FeedbackAnalysis.FeedbacksHandlerApi` | Python FastAPI + BERT | ML-классификация тональности (`POST /predict`, `POST /predict/batch`) | — | 8000 |
-| `FeedbackAnalysis.Contracts` | Class library | Общие DTO/модели для всех .NET-сервисов | — | — |
+| Сервис | Технология | Назначение | Локальный порт |
+|---|---|---|---|
+| `FeedbackAnalysis.ClientUI` | ASP.NET Core MVC | Веб-интерфейс оператора: вкладки Все/Приоритетные/Архив, ответы, архивирование | https://localhost:7154 |
+| `FeedbackAnalysis.DataApi` | ASP.NET Core Web API + EF Core | REST API хранения/пагинации отзывов, вызов ML, статусы, ответы оператора (SQLite) | https://localhost:8082 |
+| `FeedbackAnalysis.FakeFeedbacksService` | ASP.NET Core Web API | Генератор фейковых отзывов из шаблонов; ручной `POST api/generation/run` + opt-in таймер | https://localhost:7503 |
+| `FeedbackAnalysis.FeedbacksHandlerApi` | Python FastAPI + BERT | ML-классификация тональности (`POST /predict`, `POST /predict/batch`) | http://localhost:8000 |
+| `FeedbackAnalysis.Contracts` | Class library | Общие DTO/модели для всех .NET-сервисов | — |
 
 ## Архитектура и модульность
 
@@ -37,7 +37,7 @@ Tests    ──► ClientUI + Contracts + DataApi + FakeFeedbacksService
 
 Правила:
 
-- Сервисы общаются **только по HTTP** через конфигурацию `Services:{Имя}` (например, `Services:FeedbacksData`, `Services:FeedbacksHandler`). Никогда не хардкодьте URL — добавляйте ключ в `appsettings.json` и переопределяйте в docker-compose через переменную `Services__{Имя}`.
+- Сервисы общаются **только по HTTP** через конфигурацию `Services:{Имя}` (например, `Services:FeedbacksData`, `Services:FeedbacksHandler`). Никогда не хардкодьте URL — добавляйте ключ в `appsettings.json`; переопределяйте через переменные окружения `Services__{Имя}`.
 - Общие модели/DTO размещаются **только** в `FeedbackAnalysis.Contracts`. Дублирование моделей между сервисами запрещено.
 - Каждый сервис самодостаточен: свои контроллеры, сервисы, репозитории, DI-регистрация в `Program.cs`.
 
@@ -46,7 +46,7 @@ Tests    ──► ClientUI + Contracts + DataApi + FakeFeedbacksService
 1. Новая папка + `.csproj` в корне решения.
 2. Запись проекта в `FeedbackAnalysis.slnx`.
 3. Общие DTO — в `Contracts`; ссылка нового проекта только на `Contracts`.
-4. Сервис в `docker-compose.yml` (+ healthcheck и `depends_on: condition: service_healthy` для зависимостей).
+4. Ключи конфигурации в `appsettings.json`; при необходимости — в профиль запуска «Все сервисы (https)» (`FeedbackAnalysis.slnLaunch`).
 5. Тестовый проект/папка в `FeedbackAnalysis.Tests`, зеркалирующая структуру сервиса.
 6. Если проект .NET — добавить `public partial class Program { }` в `Program.cs` (нужен для интеграционных тестов).
 
@@ -58,8 +58,8 @@ dotnet build FeedbackAnalysis.slnx --no-restore --nologo
 dotnet test FeedbackAnalysis.slnx
 ```
 
-Запуск всего стенда локально: `docker compose up` (или профиль Docker Compose из Visual Studio).
-Запуск одного сервиса: `dotnet run --project FeedbackAnalysis.DataApi`.
+Запуск всех .NET-сервисов локально: профиль «Все сервисы (https)» (`FeedbackAnalysis.slnLaunch`, Visual Studio) или по одному: `dotnet run --project FeedbackAnalysis.DataApi`.
+ML-сервис запускается вручную (см. раздел Обзор); перед первым запуском — `python download_model.py`.
 
 ## Тестирование — обязательные правила
 
@@ -85,7 +85,7 @@ dotnet test FeedbackAnalysis.slnx
 - Конфигурация читается через `IConfiguration.GetSection(...)` (без IOptions) — придерживайтесь этого до появления обоснованной причины иначе.
 - Схема БД создаётся через `EnsureCreated()` (двойной вызов: в конструкторе `EFContext` и один раз на старте DataApi) — это осознанный дизайн, от него зависят тесты. Не заменяйте на `Migrate()` без обсуждения.
 - Пакет `SQLitePCLRaw.bundle_e_sqlite3` запинен на 2.1.13 (CVE-2025-6965) — не обновляйте без проверки уязвимостей.
-- Python-сервис не входит в slnx — его зависимости фиксируются в `requirements.txt`, модель скачивается при сборке Docker-образа.
+- Python-сервис не входит в slnx — его зависимости фиксируются в `requirements.txt`, модель скачивается локально скриптом `download_model.py`.
 
 ## Известные особенности
 

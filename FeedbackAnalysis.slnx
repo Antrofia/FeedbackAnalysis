@@ -1,7 +1,4 @@
 <Solution>
-  <Project Path="docker-compose.dcproj">
-    <Build />
-  </Project>
   <Project Path="./FeedbackAnalysis.ClientUI/FeedbackAnalysis.ClientUI.csproj" />
   <Project Path="./FeedbackAnalysis.Contracts/FeedbackAnalysis.Contracts.csproj" />
   <Project Path="./FeedbackAnalysis.DataApi/FeedbackAnalysis.DataApi.csproj" />
