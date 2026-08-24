@@ -1,6 +1,0 @@
-@FeedbackAnalysis.WBService_HostAddress = http://localhost:5215
-
-GET {{FeedbackAnalysis.WBService_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

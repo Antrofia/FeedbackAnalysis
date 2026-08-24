@@ -1,0 +1,97 @@
+@model FeedbackAnalysis.ClientUI.Models.FeedbackViewModel
+@using FeedbackAnalysis.Contracts.Models
+@{
+    // Архивная вкладка — карточка только для чтения
+    var readOnly = ViewData["ReadOnly"] as bool? ?? false;
+    var tab = ViewData["Tab"] as string ?? "all";
+    var status = Model.Status ?? 0;
+
+    // Разрешаем только http(s)-ссылки — данные приходят из внешних источников
+    var safeLink = Model.NomenclatureLink != null
+        && (Model.NomenclatureLink.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || Model.NomenclatureLink.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+
+    var cardClass = Model.Tonality switch
+    {
+        null => "",
+        <= -0.25 => "rating-negative",
+        >= 0.25 => "rating-positive",
+        _ => "rating-neutral"
+    };
+}
+
+<div class="card mb-3 review-item @cardClass" data-id="@Model.Id">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="card-title mb-1">@Model.Sender</h5>
+                <div class="mb-2 status-badges">
+                    @if ((status & (int)FeedbackAnswerStatuses.RequireToAnswer) != 0)
+                    {
+                        <span class="badge bg-warning text-dark">Требует ответа</span>
+                    }
+                    @if ((status & (int)FeedbackAnswerStatuses.Answered) != 0)
+                    {
+                        <span class="badge bg-success">Отвечен</span>
+                    }
+                    @if ((status & (int)FeedbackAnswerStatuses.Archived) != 0)
+                    {
+                        <span class="badge bg-secondary">В архиве</span>
+                    }
+                </div>
+            </div>
+            <small class="text-muted">@Model.CreatedDate?.ToString("dd.MM.yyyy HH:mm")</small>
+        </div>
+
+        <p class="card-text mt-2">@Model.Text</p>
+
+        <div class="mb-2">
+            Оценка: <b class="ms-1">@Model.Rating</b>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.NomenclatureLink) && safeLink)
+        {
+            <div class="text-secondary">
+                Товар: <a href="@Model.NomenclatureLink" target="_blank" rel="noopener">@Model.NomenclatureLink</a>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Model.NomenclatureLink))
+        {
+            <div class="text-secondary">Товар: @Model.NomenclatureLink</div>
+        }
+
+        @if (!readOnly && (status & (int)(FeedbackAnswerStatuses.Answered | FeedbackAnswerStatuses.Archived)) == 0)
+        {
+            <button type="button" class="btn btn-outline-primary btn-sm reply-toggle mt-2" data-review-id="@Model.Id">
+                Ответить
+            </button>
+            <div class="reply-form mt-2" style="display: none;" data-review-id="@Model.Id">
+                <form asp-controller="Home" asp-action="Reply" method="post" class="row g-2 align-items-center">
+                    <input type="hidden" name="feedbackId" value="@Model.Id" />
+                    <input type="hidden" name="tab" value="@tab" />
+                    <div class="col-sm-4 col-md-3">
+                        <input type="text" name="sender" class="form-control form-control-sm" value="Администратор" aria-label="Имя отправителя" />
+                    </div>
+                    <div class="col-sm-6 col-md-7">
+                        <textarea name="text" rows="2" class="form-control form-control-sm" placeholder="Текст ответа"></textarea>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
+                    </div>
+                </form>
+                <form asp-controller="Home" asp-action="Archive" method="post" class="mt-2">
+                    <input type="hidden" name="feedbackId" value="@Model.Id" />
+                    <input type="hidden" name="tab" value="@tab" />
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Пропустить</button>
+                </form>
+            </div>
+        }
+
+        @if ((status & (int)FeedbackAnswerStatuses.Answered) != 0)
+        {
+            <div class="answer-block mt-2 p-2 border rounded bg-light">
+                <b>Ответ (@Model.AnswerSender):</b> @Model.AnswerText
+            </div>
+        }
+    </div>
+</div>

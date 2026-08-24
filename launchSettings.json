@@ -6,7 +6,8 @@
       "serviceActions": {
         "feedbackanalysis.clientui": "StartDebugging",
         "feedbackanalysis.dataapi": "StartDebugging",
-        "feedbackanalysis.wbservice": "StartDebugging"
+        "feedbackanalysis.fakefeedbacksservice": "StartDebugging",
+        "feedbackanalysis.feedbackshandlerapi": "StartDebugging"
       }
     }
   }

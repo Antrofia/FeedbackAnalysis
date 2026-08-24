@@ -1,13 +1,9 @@
 using FeedbackAnalysis.ClientUI.Models;
 using FeedbackAnalysis.ClientUI.Services;
-using FeedbackAnalysis.Contracts.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAutoMapper(builder =>
-{
-    builder.CreateMap<FeedbackModel, FeedbackViewModel>().ReverseMap();
-});
+builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
 
 builder.Services.AddHttpClient<IFeedbacksService, FeedbacksService>();
 
@@ -38,5 +34,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-
 app.Run();
+
+// Нужен для интеграционных тестов (WebApplicationFactory)
+public partial class Program { }

@@ -22,3 +22,6 @@ jobs:
 
       - name: Build
         run: dotnet build FeedbackAnalysis.slnx --no-restore --nologo
+
+      - name: Test
+        run: dotnet test FeedbackAnalysis.slnx --no-build --nologo

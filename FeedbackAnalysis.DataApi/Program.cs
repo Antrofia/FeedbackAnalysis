@@ -13,9 +13,20 @@ builder.Services.AddDbContext<EFContext>(ops => ops.UseSqlite(builder.Configurat
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IFeedbackAnswerStatusRepository, FeedbackAnswerStatusRepository>();
 builder.Services.AddScoped<IFeedbackTonalityRepository, FeedbackTonalityRepository>();
+builder.Services.AddScoped<IFeedbackAnswerRepository, FeedbackAnswerRepository>();
 builder.Services.AddScoped<IUnitOfWork, EFUnitOfWork>();
 
 builder.Services.AddScoped<IFeedbacksService, FeedbacksService>();
+
+// Typed-клиент ML-сервиса тональности.
+builder.Services.AddHttpClient<ITonalityService, TonalityService>(client =>
+{
+    var baseUrl = builder.Configuration.GetSection("Services")["FeedbacksHandler"];
+    if (!string.IsNullOrWhiteSpace(baseUrl))
+    {
+        client.BaseAddress = new Uri($"{baseUrl.TrimEnd('/')}/");
+    }
+});
 
 builder.Services.AddControllers();
 
@@ -38,3 +49,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+namespace FeedbackAnalysis.DataApi
+{
+    public partial class Program { }
+}

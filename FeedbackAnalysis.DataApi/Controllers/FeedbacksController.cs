@@ -29,7 +29,7 @@ namespace FeedbackAnalysis.DataApi.Controllers
 
         [Route("list")]
         [HttpGet]
-        public async Task<IActionResult> GetList(long dateFrom, long dateTo, int status = ~0, int page = 1, int pageSize = 50)
+        public async Task<IActionResult> GetList(long dateFrom, long dateTo, int status = ~0, int page = 1, int pageSize = 50, bool priority = false)
         {
             if (dateFrom <= 0 || dateTo <= 0)
             {
@@ -52,7 +52,7 @@ namespace FeedbackAnalysis.DataApi.Controllers
             var dFrom = DateTimeOffset.FromUnixTimeSeconds(dateFrom).UtcDateTime;
             var dTo = DateTimeOffset.FromUnixTimeSeconds(dateTo).UtcDateTime;
 
-            var result = await _feedbacksService.GetListAsync(dFrom, dTo, (FeedbackAnswerStatuses)status, page, pageSize);
+            var result = await _feedbacksService.GetListAsync(dFrom, dTo, (FeedbackAnswerStatuses)status, page, pageSize, priorityOnly: priority);
 
             return Ok(new
             {
@@ -61,6 +61,24 @@ namespace FeedbackAnalysis.DataApi.Controllers
                 page = result.Page,
                 pageSize = result.PageSize
             });
+        }
+
+        [Route("answer")]
+        [HttpPost]
+        public async Task<IActionResult> Answer(FeedbackAnswerRequest request)
+        {
+            var answered = await _feedbacksService.AnswerFeedbackAsync(request);
+
+            return answered ? Ok() : NotFound();
+        }
+
+        [Route("archive/{feedbackId}")]
+        [HttpPost]
+        public async Task<IActionResult> Archive(string feedbackId)
+        {
+            var archived = await _feedbacksService.ArchiveFeedbackAsync(feedbackId);
+
+            return archived ? Ok() : NotFound();
         }
     }
 }

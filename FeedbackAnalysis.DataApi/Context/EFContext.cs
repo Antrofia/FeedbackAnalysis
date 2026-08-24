@@ -9,6 +9,7 @@ namespace FeedbackAnalysis.DataApi.Context
         public DbSet<FeedbackModel> Feedbacks { get; set; }
         public DbSet<FeedbackTonalityModel> FeedbacksTonality { get; set; }
         public DbSet<FeedbackAnswerStatusModel> FeedbacksAnswerStatus { get; set; }
+        public DbSet<FeedbackAnswerModel> FeedbacksAnswers { get; set; }
 
         public EFContext(DbContextOptions options) : base(options)
         {

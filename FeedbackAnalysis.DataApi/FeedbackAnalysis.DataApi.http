@@ -1,6 +1,30 @@
-@FeedbackAnalysis.DataApi_HostAddress = http://localhost:5199
+@FeedbackAnalysis.DataApi_HostAddress = https://localhost:8082
 
-GET {{FeedbackAnalysis.DataApi_HostAddress}}/weatherforecast/
+### Проверка живости
+GET {{FeedbackAnalysis.DataApi_HostAddress}}/healthz
+Accept: application/json
+
+### Список отзывов (последний год, первая страница)
+GET {{FeedbackAnalysis.DataApi_HostAddress}}/api/feedbacks/list?dateFrom=631152000&dateTo=4102444800&page=1&pageSize=20
+Accept: application/json
+
+### Приоритетные (негативные) отзывы
+GET {{FeedbackAnalysis.DataApi_HostAddress}}/api/feedbacks/list?dateFrom=631152000&dateTo=4102444800&status=1&priority=true&page=1&pageSize=20
+Accept: application/json
+
+### Архив (отвеченные и архивные)
+GET {{FeedbackAnalysis.DataApi_HostAddress}}/api/feedbacks/list?dateFrom=631152000&dateTo=4102444800&status=6&page=1&pageSize=20
 Accept: application/json
 
 ###
+POST {{FeedbackAnalysis.DataApi_HostAddress}}/api/feedbacks/answer
+Content-Type: application/json
+
+{
+  "feedbackId": "fake:00000000-0000-0000-0000-000000000000",
+  "sender": "Администратор",
+  "text": "Спасибо за отзыв!"
+}
+
+###
+POST {{FeedbackAnalysis.DataApi_HostAddress}}/api/feedbacks/archive/fake:00000000-0000-0000-0000-000000000000

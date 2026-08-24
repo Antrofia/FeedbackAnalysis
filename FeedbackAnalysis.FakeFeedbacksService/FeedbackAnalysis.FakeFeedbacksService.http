@@ -1,0 +1,11 @@
+@FeedbackAnalysis.FakeFeedbacksService_HostAddress = https://localhost:7503
+
+### Проверка живости
+GET {{FeedbackAnalysis.FakeFeedbacksService_HostAddress}}/healthz
+Accept: application/json
+
+### Сгенерировать и отправить в DataApi батч по умолчанию (Generator:BatchSize)
+POST {{FeedbackAnalysis.FakeFeedbacksService_HostAddress}}/api/generation/run
+
+### Сгенерировать батч из 25 отзывов
+POST {{FeedbackAnalysis.FakeFeedbacksService_HostAddress}}/api/generation/run?count=25
